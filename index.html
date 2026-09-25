@@ -832,7 +832,7 @@ function ccol(c){ return ({"Severe erosion":P.ero2,"Erosion":P.ero1,"Stable":P.n
 const fmt = (v,d=2) => v==null||!isFinite(v) ? "–" : (v>0?"+":"")+v.toFixed(d).replace("-","−");
 
 // ---------- map
-const map = L.map("map",{preferCanvas:true, zoomSnap:0.5, minZoom:7, maxZoom:17, attributionControl:true})
+const map = L.map("map",{preferCanvas:true, fadeAnimation:false, zoomSnap:0.5, minZoom:7, maxZoom:17, attributionControl:true})
   .fitBounds([[38.85,8.1],[41.3,9.85]]);
 map.attributionControl.setPrefix(false).addAttribution("Shorelines: CoastSat · Coastline: Natural Earth");
 const canvas = L.canvas({padding:0.3, tolerance:4});
@@ -844,9 +844,12 @@ const BG = {
   osm: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         {maxZoom:19, attribution:"© OpenStreetMap contributors"}),
   none: null };
-let bg = "sat";
+let bg = "sat", tileErrors = 0;
+// fall back to the outline if background tiles cannot be loaded (offline, blocked hosts)
+for (const l of [BG.sat, BG.osm]) l.on("tileerror", ()=>{ if (++tileErrors===6 && bg!=="none") setBg("none"); });
 function setBg(k){
   bg = k; for (const [n,l] of Object.entries(BG)) if (l) { if (n===k) map.addLayer(l); else map.removeLayer(l); }
+  if (k==="none") map.addLayer(land); else map.removeLayer(land);
   document.querySelectorAll("#bg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.bg===k));
   try { localStorage.setItem("sar-bg", k); } catch(e) {}
   zoomLayers();
